@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geejgarh Gyan Kendra - Asset Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- PapaParse for CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    
+    <!-- SheetJS for Excel (.xlsx) -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .card { @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        
+        /* Table Styles */
+        th { @apply px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b border-gray-200 whitespace-nowrap; }
+        td { @apply px-4 py-3 whitespace-nowrap text-sm text-gray-700 border-b border-gray-100; }
+        tr:hover { @apply bg-blue-50 transition-colors; }
+        
+        /* Custom Scrollbar for table */
+        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-18 items-center py-3">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-600 p-2 rounded-lg text-white">
+                        <i data-lucide="layout-dashboard" class="h-6 w-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-xl text-gray-900 leading-tight">Asset Management</h1>
+                        <p class="text-xs text-gray-500">Geejgarh Gyan Kendra Report</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition shadow-sm text-sm font-medium">
+                        <i data-lucide="file-spreadsheet" class="h-4 w-4"></i>
+                        <span>Import Excel/CSV</span>
+                        <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" class="hidden">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Assets -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between hover:shadow-md transition-shadow">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Quantity</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-1" id="kpiTotalQty">0</p>
+                    <p class="text-xs text-green-600 flex items-center mt-2 font-medium">
+                        <i data-lucide="check-circle" class="h-3 w-3 mr-1"></i> Verified Items
+                    </p>
+                </div>
+                <div class="p-3 bg-blue-50 rounded-xl text-blue-600">
+                    <i data-lucide="boxes" class="h-8 w-8"></i>
+                </div>
+            </div>
+
+            <!-- In Use -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between hover:shadow-md transition-shadow">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Currently In Use</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-1" id="kpiInUse">0</p>
+                    <p class="text-xs text-gray-500 mt-2">Active deployment</p>
+                </div>
+                <div class="p-3 bg-emerald-50 rounded-xl text-emerald-600">
+                    <i data-lucide="activity" class="h-8 w-8"></i>
+                </div>
+            </div>
+
+            <!-- Damaged/Repair -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between hover:shadow-md transition-shadow">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Damaged / Repair</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-1" id="kpiDamaged">0</p>
+                    <p class="text-xs text-red-500 mt-2 font-medium flex items-center">
+                        <i data-lucide="alert-triangle" class="h-3 w-3 mr-1"></i> Action Required
+                    </p>
+                </div>
+                <div class="p-3 bg-red-50 rounded-xl text-red-600">
+                    <i data-lucide="wrench" class="h-8 w-8"></i>
+                </div>
+            </div>
+
+            <!-- Projects -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between hover:shadow-md transition-shadow">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Projects</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-1" id="kpiProjects">0</p>
+                    <p class="text-xs text-gray-500 mt-2">Distinct Allocations</p>
+                </div>
+                <div class="p-3 bg-purple-50 rounded-xl text-purple-600">
+                    <i data-lucide="folder-kanban" class="h-8 w-8"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Project Distribution -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold text-gray-900">Project Allocation</h3>
+                    <button class="text-gray-400 hover:text-gray-600"><i data-lucide="more-horizontal" class="h-5 w-5"></i></button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="projectChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Asset Class Bar Chart -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold text-gray-900">Asset Classes</h3>
+                    <button class="text-gray-400 hover:text-gray-600"><i data-lucide="more-horizontal" class="h-5 w-5"></i></button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="classChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+             <!-- Status/Action Plan -->
+             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-6">Condition Status</h3>
+                <div class="chart-container flex justify-center">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
+                <h3 class="text-lg font-bold text-gray-900 mb-6">Acquisition Timeline</h3>
+                <div class="chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comprehensive Data Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+            <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Full Asset Register</h3>
+                    <p class="text-sm text-gray-500 mt-1">Detailed inventory with all captured attributes</p>
+                </div>
+                <div class="flex gap-3">
+                    <div class="relative w-full md:w-64">
+                        <input type="text" id="searchInput" placeholder="Search serial, model, user..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full shadow-sm">
+                        <i data-lucide="search" class="absolute left-3 top-2.5 h-4 w-4 text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Table Container with Horizontal Scroll -->
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="min-w-full divide-y divide-gray-200" id="mainTable">
+                    <thead>
+                        <!-- Headers injected dynamically or hardcoded based on file -->
+                        <tr class="bg-gray-50" id="tableHeaderRow">
+                            <!-- Standard headers based on "Fixed Assets Details Geejgarh Gyan Kendra" -->
+                            <th>S. No.</th>
+                            <th>ID Code</th>
+                            <th>Acq. Date</th>
+                            <th>Description</th>
+                            <th>Qty</th>
+                            <th>Project</th>
+                            <th>Location</th>
+                            <th>Asset Class</th>
+                            <th>Accessories</th>
+                            <th>Model No</th>
+                            <th>Serial No</th>
+                            <th>Custodian</th>
+                            <th>Handover Date</th>
+                            <th>Remarks</th>
+                            <th>Action Plan</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="tableBody">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-4 border-t border-gray-200 bg-gray-50 text-center text-sm text-gray-500">
+                <span id="rowCount">0</span> records found.
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Initialization ---
+        lucide.createIcons();
+        let charts = {};
+        let globalData = [];
+
+        // --- Mock Data (from user snippet) ---
+        const initialMockData = [
+            ["1","Read India /GGK/Colore","2008","Coolor -1","1","Read India","Geejgarh Gyan Kendra","Coolor","Coolor","No","No","Chanderprakash sharma","","Stock Room","In Use"],
+            ["2","Read India /GGK/Celing Fain","2010","Celing Fain","1","Read India","Geejgarh Gyan Kendra","Celing Fain","Celing Fain","No","No","Chanderprakash sharma","","Stock Room","In Use"],
+            ["3","RI/Accenture/GGK/Revoling Chair","2012","Revoling Chair -1","1","Read India","Geejgarh Gyan Kendra","Revoling Chair","Revoling Chair","No","No","Chanderprakash sharma","","Damage","To Be repaired/destroy"],
+            ["4","Read India/GGK/Big chair Metal","2012","Big chair Metal -1","1","Read India","Geejgarh Gyan Kendra","Big chair Metal","Big chair Metal","No","No","Chanderprakash sharma","","Stock Room","In Use"],
+            ["5","Read India/GGK/Mudha","2012","Mudha -5","5","Read India","Geejgarh Gyan Kendra","Mudha","Mudha","No","No","Chanderprakash sharma","","Damage","To Be repaired/destroy"],
+            ["6","Read India/GGK/Plastic chair","2012","Plastic Chair -5","5","Read India","Geejgarh Gyan Kendra","Plastic chair","Plastic chair","No","No","Chanderprakash sharma","","Stock Room","In Use"],
+            ["178","READ India/GGK/Rolling Chair","2025","Rolling Chair -2","2","Read India","Geejgarh Gyan Kendra","Rolling Chair","Rolling Chair","No","No","Chanderprakash sharma","","Stock Room","In Use"],
+            ["180","RI/Accenture/GGK/Hanger stand","2024","Hanger stand -2","2","Accenture","Geejgarh Gyan Kendra","Hanger stand","Hanger stand","No","No","Chanderprakash sharma","","Stock Room","In Use"],
+            ["181","RI/Accenture/GGK/Inverter 4kW","2024","Inverter 4kW -1","2","Accenture","Geejgarh Gyan Kendra","Inverter 4kW","Inverter 4kW","No","No","Chanderprakash sharma","","Stock Room","In Use"],
+             ["182","RI/Accenture/GGK/Inverter Battery","2024","Inverter Battery -2","2","Accenture","Geejgarh Gyan Kendra","Inverter Battery","Inverter Battery","No","No","Chanderprakash sharma","","Stock Room","In Use"],
+            ["183","RI/Accenture/GGK/CCTV Cameras","2024","CCTV Cameras -6","6","Accenture","Geejgarh Gyan Kendra","CCTV Cameras","CCTV Cameras","No","No","Chanderprakash sharma","","Stock Room","In Use"]
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load Initial Mock Data
+            processRawDataArray(initialMockData);
+
+            // Setup File Upload Listener
+            const fileInput = document.getElementById('fileInput');
+            fileInput.addEventListener('change', handleFileUpload);
+
+            // Search Listener
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                filterTable(e.target.value);
+            });
+        });
+
+        // --- File Handling ---
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const name = file.name.toLowerCase();
+
+            if (name.endsWith('.csv')) {
+                // Handle CSV
+                Papa.parse(file, {
+                    complete: function(results) {
+                        // Assuming row 1 is header, slice it off
+                        const data = results.data.slice(1); 
+                        processRawDataArray(data);
+                    },
+                    header: false,
+                    skipEmptyLines: true
+                });
+            } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+                // Handle Excel
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Convert to array of arrays, header: 1 gives raw array of arrays
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
+                    
+                    // Remove header row (index 0)
+                    const rows = jsonData.length > 1 ? jsonData.slice(1) : [];
+                    processRawDataArray(rows);
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert("Please upload a .csv or .xlsx file.");
+            }
+        }
+
+        // --- Data Processing ---
+        function processRawDataArray(rows) {
+            // Mapping based on "Fixed Assets Details Geejgarh Gyan Kendra.xlsx"
+            // 0:S.No, 1:ID, 2:Date, 3:Desc, 4:Qty, 5:Project, 6:Loc, 7:Class, 8:Acc, 9:Model, 10:Serial, 11:Custodian, 12:Handover, 13:Remarks, 14:ActionPlan
+            
+            const cleanData = rows.map(row => {
+                // Safety check for empty rows
+                if (!row || row.length < 2) return null;
+
+                // Handle missing columns by filling with empty string
+                const safeRow = (index) => (row[index] !== undefined && row[index] !== null) ? String(row[index]).trim() : "";
+
+                const qtyVal = parseFloat(safeRow(4));
+                const quantity = isNaN(qtyVal) ? 0 : qtyVal;
+
+                return {
+                    sNo: safeRow(0),
+                    id: safeRow(1),
+                    date: safeRow(2),
+                    desc: safeRow(3),
+                    quantity: quantity,
+                    project: safeRow(5) || "Unassigned",
+                    location: safeRow(6),
+                    class: safeRow(7) || "General",
+                    accessories: safeRow(8),
+                    model: safeRow(9),
+                    serial: safeRow(10),
+                    custodian: safeRow(11),
+                    handover: safeRow(12),
+                    remarks: safeRow(13),
+                    actionPlan: safeRow(14) || "Unknown",
+                    // Derived for charts
+                    year: extractYear(safeRow(2)),
+                    status: determineStatus(safeRow(14), safeRow(13)) // Use ActionPlan, fallback to Remarks
+                };
+            }).filter(item => item !== null && item.desc !== "");
+
+            globalData = cleanData;
+            updateDashboard(cleanData);
+        }
+
+        function extractYear(dateStr) {
+            if (!dateStr) return "Unknown";
+            // Match 4 digits
+            const match = dateStr.match(/\d{4}/);
+            return match ? match[0] : "Unknown";
+        }
+
+        function determineStatus(actionPlan, remarks) {
+            const combined = (actionPlan + " " + remarks).toLowerCase();
+            if (combined.includes("use") || combined.includes("active")) return "In Use";
+            if (combined.includes("damage") || combined.includes("repair") || combined.includes("destroy")) return "Damaged/Repair";
+            if (combined.includes("lost") || combined.includes("stolen")) return "Lost";
+            return "In Use"; // Default
+        }
+
+        // --- Dashboard Update Logic ---
+        function updateDashboard(data) {
+            updateKPIs(data);
+            renderCharts(data);
+            renderTable(data);
+        }
+
+        function updateKPIs(data) {
+            const totalQty = data.reduce((sum, item) => sum + item.quantity, 0);
+            const inUse = data.filter(d => d.status === "In Use").reduce((sum, item) => sum + item.quantity, 0); // Count items, not just rows
+            // Or if KPI should correspond to Qty sum:
+            const damaged = data.filter(d => d.status === "Damaged/Repair" || d.status === "Lost").reduce((sum, item) => sum + item.quantity, 0);
+            const projects = new Set(data.map(d => d.project)).size;
+
+            animateValue("kpiTotalQty", totalQty);
+            animateValue("kpiInUse", inUse);
+            animateValue("kpiDamaged", damaged);
+            animateValue("kpiProjects", projects);
+        }
+
+        function renderCharts(data) {
+            // 1. Projects (Doughnut)
+            const projData = groupBySum(data, 'project', 'quantity');
+            createChart('projectChart', 'doughnut', Object.keys(projData), Object.values(projData), 'Assets', 
+                ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']);
+
+            // 2. Class (Bar)
+            const classData = groupBySum(data, 'class', 'quantity');
+            createChart('classChart', 'bar', Object.keys(classData), Object.values(classData), 'Qty', 
+                ['#6366f1']);
+
+            // 3. Status (Pie)
+            const statusData = groupBySum(data, 'status', 'quantity');
+            createChart('statusChart', 'pie', Object.keys(statusData), Object.values(statusData), 'Status', 
+                ['#10b981', '#ef4444', '#f59e0b', '#64748b']);
+
+            // 4. Timeline (Line)
+            const timelineData = groupBySum(data, 'year', 'quantity');
+            // Remove 'Unknown' for chart clarity if possible, or keep at end
+            const years = Object.keys(timelineData).sort();
+            const counts = years.map(y => timelineData[y]);
+            createChart('timelineChart', 'line', years, counts, 'Acquisitions', ['#2563eb']);
+        }
+
+        function groupBySum(data, keyField, sumField) {
+            return data.reduce((acc, item) => {
+                const key = item[keyField];
+                acc[key] = (acc[key] || 0) + item[sumField];
+                return acc;
+            }, {});
+        }
+
+        function createChart(canvasId, type, labels, data, label, colors) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (charts[canvasId]) charts[canvasId].destroy();
+
+            // Dynamic colors if array provided is short
+            const bgColors = labels.map((_, i) => colors[i % colors.length]);
+
+            charts[canvasId] = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: type === 'line' ? colors[0] : bgColors,
+                        borderColor: type === 'line' ? colors[0] : '#ffffff',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: type === 'line' // Area fill for line chart
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            position: 'bottom',
+                            display: type !== 'bar' && type !== 'line'
+                        }
+                    },
+                    scales: (type === 'bar' || type === 'line') ? {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    } : {}
+                }
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            document.getElementById('rowCount').textContent = data.length;
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                
+                // Status Badge
+                let statusClass = 'bg-gray-100 text-gray-800';
+                if(item.status === 'In Use') statusClass = 'bg-green-100 text-green-700';
+                if(item.status.includes('Damage')) statusClass = 'bg-red-100 text-red-700';
+                
+                tr.innerHTML = `
+                    <td class="font-mono text-xs text-gray-500">${item.sNo}</td>
+                    <td class="font-medium text-gray-900">${item.id}</td>
+                    <td>${item.date}</td>
+                    <td>${item.desc}</td>
+                    <td class="font-bold">${item.quantity}</td>
+                    <td><span class="px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">${item.project}</span></td>
+                    <td>${item.location}</td>
+                    <td>${item.class}</td>
+                    <td>${item.accessories}</td>
+                    <td>${item.model}</td>
+                    <td>${item.serial}</td>
+                    <td>${item.custodian}</td>
+                    <td>${item.handover}</td>
+                    <td class="text-xs truncate max-w-xs" title="${item.remarks}">${item.remarks}</td>
+                    <td><span class="px-2 py-1 rounded-full text-xs font-semibold ${statusClass}">${item.actionPlan}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTable(query) {
+            const lowerQ = query.toLowerCase();
+            const filtered = globalData.filter(item => 
+                item.desc.toLowerCase().includes(lowerQ) ||
+                item.serial.toLowerCase().includes(lowerQ) ||
+                item.custodian.toLowerCase().includes(lowerQ) ||
+                item.model.toLowerCase().includes(lowerQ)
+            );
+            renderTable(filtered);
+        }
+
+        function animateValue(id, end) {
+            const obj = document.getElementById(id);
+            const start = parseInt(obj.innerHTML) || 0;
+            if (start === end) return;
+            
+            let startTimestamp = null;
+            const duration = 1000;
+            
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.innerHTML = end;
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+    </script>
+</body>
+</html>
